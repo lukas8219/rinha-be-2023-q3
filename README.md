@@ -1,0 +1,2 @@
+- Batch
+- Split entre escrita e leitura? https://serverfault.com/questions/152745/nginx-proxy-by-request-method
