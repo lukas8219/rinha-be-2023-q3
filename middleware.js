@@ -53,7 +53,7 @@ module.exports.validateBody = async function validate(req, res, next){
         })
     }
 
-    if(stack && stack.length && stack.some((s) => s === undefined || s === null)){
+    if(stack && stack.length && stack.some((s) => s === undefined || s === null || s === "" || !_.isString(s))){
         res.status(422);
         return res.json({
             error: 'stack com item invalido'

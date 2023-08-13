@@ -8,18 +8,11 @@ const os = require('os');
 const cluster = require('cluster');
 const process = require('process');
 
+process.env.UV_THREADPOOL_SIZE = os.cpus().length
+
 const app = express();
 
 app.use(bodyParser.json())
-
-/*
-{
-    "apelido" : "josé",
-    "nome" : "José Roberto",
-    "nascimento" : "2000-10-01",
-    "stack" : ["C#", "Node", "Oracle"]
-}
-*/
 
 app.post('/pessoas', validateBody, async (req, res, next) => {
     try {
@@ -65,7 +58,7 @@ app.use(errorHandler);
 
 const numCPUs = Math.ceil(os.cpus().length / 2);
 
-if(cluster.isPrimary){
+if(cluster.isPrimary && process.env.CLUSTER === 'true'){
     logger.info(`index.js: Primary ${process.pid} is running`);
 
     for (let i = 0; i < numCPUs; i++) {

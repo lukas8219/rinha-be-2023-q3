@@ -1,2 +1,11 @@
-- Batch
-- Split entre escrita e leitura? https://serverfault.com/questions/152745/nginx-proxy-by-request-method
+# Rinha BE 2023 - Q3 @luucaspole/@lukas8219
+
+### Tecnologias usadas:
+
+- Node
+- Redis (vou meter ainda)
+- Postgres
+
+
+### Tática:
+Apenas fazer batch no client e rezar pro eventloop não morrer
