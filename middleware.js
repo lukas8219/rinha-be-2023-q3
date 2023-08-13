@@ -1,5 +1,6 @@
 const { logger } = require("./logger");
 const _ = require('lodash');
+const { promisify } = require('util');
 
 module.exports.validateBody = async function validate(req, res, next){
     const { apelido, nome, nascimento, stack } = req.body;

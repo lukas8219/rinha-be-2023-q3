@@ -15,5 +15,8 @@
     "lodash": "^4.17.21",
     "pg": "^8.11.2",
     "pino": "^8.15.0"
+  },
+  "devDependencies": {
+    "autocannon": "^7.12.0"
   }
 }
