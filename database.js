@@ -49,7 +49,7 @@ module.exports.db = async function createConnection() {
 
 module.exports.insertPerson = async function ({ apelido, nome, nascimento, stack }) {
     const stackRaw = (stack || []);
-    const stackValue = stackRaw.length ? `ARRAY[${stackRaw.filter(Boolean).map((s) => `'${stack}'`)}]` : null;
+    const stackValue = stackRaw.length ? `ARRAY[${stackRaw.map((s) => `'${s}'`).join(',')}]` : null;
     const query = `
     INSERT INTO
      pessoas(
@@ -94,9 +94,9 @@ module.exports.findByTerm = async function findByTerm(term) {
     FROM
         pessoas
     WHERE
-	    to_tsvector('english', apelido) @@ to_tsquery('${term}:*')
-	    OR to_tsvector('english', nome) @@ to_tsquery('${term}:*')
-	    OR to_tsvector(array_to_string(stack, ' ')) @@ to_tsquery('${term}:*')
+	    to_tsvector('english', apelido) @@ plainto_tsquery('"${term}":*')
+	    OR to_tsvector('english', nome) @@ plainto_tsquery('"${term}":*')
+	    OR to_tsvector(array_to_string(stack, ' ')) @@ plainto_tsquery('"${term}":*')
     LIMIT 50;`
     return pool.query(query);
 }
@@ -127,7 +127,7 @@ process.env.BATCH === 'true' ? (() => {
                 });
             };
             if (queue) {
-                logger.info(`${moduleKey} has been queued: for args ${key}`);
+                logger.debug(`${moduleKey} has been queued: for args ${key}`);
                 return queue.push(cb);
             }
             batchItems[moduleKey].set(key, new Array([cb]));

@@ -1,6 +1,6 @@
-const { logger } = require("./logger");
 const _ = require('lodash');
-const { promisify } = require('util');
+const { logger } = require('./logger');
+const moment = require('moment');
 
 module.exports.validateBody = async function validate(req, res, next){
     const { apelido, nome, nascimento, stack } = req.body;
@@ -46,6 +46,13 @@ module.exports.validateBody = async function validate(req, res, next){
         })
     }
 
+    if(nascimento.length && !moment(nascimento, 'YYYY-MM-DD').isValid()){
+        res.status(422);
+        return res.json({
+            error: 'nascimento invalido'
+        })
+    }
+
     if(!_.isUndefined(stack) && !Array.isArray(stack)){
         res.status(422);
         return res.json({
@@ -53,10 +60,17 @@ module.exports.validateBody = async function validate(req, res, next){
         })
     }
 
-    if(stack && stack.length && stack.some((s) => s === undefined || s === null || s === "" || !_.isString(s))){
+    if(stack&& stack.length && stack.some((s) => s === undefined || s === null || s === "" || !_.isString(s))){
         res.status(422);
         return res.json({
             error: 'stack com item invalido'
+        })
+    }
+
+    if(stack && stack.length && stack.some((s) => s.length > 32)){
+        res.status(422);
+        return res.json({
+            error: 'stack com item maior que 32 caracteres'
         })
     }
 
@@ -64,8 +78,8 @@ module.exports.validateBody = async function validate(req, res, next){
 }
 
 module.exports.errorHandler = function clientErrorHandler (err, req, res, next) {
-    logger.error(`Something failed`, err);
-    logger.error(err);``
+    //logger.error(`Something failed`, err);
+    //logger.error(err);``
     res
         .status(err.status || 500)
         .send({ error: err.err || 'Something failed' })
