@@ -1,6 +1,8 @@
 const _ = require('lodash');
 const { logger } = require('./logger');
 const moment = require('moment');
+const { store } = require('./cache');
+const { existsByApelido } = require('./database');
 
 module.exports.validateBody = async function validate(req, res, next){
     const { apelido, nome, nascimento, stack } = req.body;
@@ -71,6 +73,24 @@ module.exports.validateBody = async function validate(req, res, next){
         res.status(422);
         return res.json({
             error: 'stack com item maior que 32 caracteres'
+        })
+    }
+
+    const isUsed = await store.sIsMember('pessoas:used-nicknames', apelido);
+
+    if(isUsed){
+        res.status(422);
+        return res.json({
+            error: 'nome ou apelido em uso',
+        })
+    }
+
+    const { count } = await existsByApelido(apelido);
+
+    if(Number(count)){
+        await store.sAdd('pessoas:used-nicknames', apelido);
+        return res.status(422).json({
+            error: 'apelido em uso'
         })
     }
 

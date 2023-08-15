@@ -16,7 +16,8 @@
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
     "pg": "^8.11.2",
-    "pino": "^8.15.0"
+    "pino": "^8.15.0",
+    "redis": "^4.6.7"
   },
   "devDependencies": {
     "autocannon": "^7.12.0",

@@ -1,6 +1,7 @@
 const pg = require('pg');
 const { logger } = require('./logger');
 const { callbackify, promisify } = require('util');
+const res = require('express/lib/response');
 
 const URL = process.env.DB_URL || 'postgres://postgres:12345678@localhost:5432/postgres';
 
@@ -17,7 +18,7 @@ pool.once('connect', () => {
             apelido VARCHAR(32) UNIQUE NOT NULL,
             nome VARCHAR(100) NOT NULL,
             nascimento DATE NOT NULL,
-            stack VARCHAR(32)[]
+            stack JSON
         );
     
         CREATE INDEX IF NOT EXISTS term_search_index_apelido ON pessoas
@@ -25,6 +26,9 @@ pool.once('connect', () => {
           
         CREATE INDEX IF NOT EXISTS term_search_index_nome ON pessoas
             USING gin(to_tsvector('english', nome));
+
+        CREATE INDEX IF NOT EXISTS term_search_index_stack ON pessoas
+            USING gin(to_tsvector('english', stack));
         `)
 });
 
@@ -42,15 +46,7 @@ async function connect() {
 
 connect();
 
-module.exports.db = async function createConnection() {
-    return new Promise(async (res) => {
-        return connection.catch(connectionErrorHandler).then(res);
-    })
-};
-
 module.exports.insertPerson = async function ({ apelido, nome, nascimento, stack }) {
-    const stackRaw = (stack || []);
-    const stackValue = stackRaw.length ? `ARRAY[${stackRaw.map((s) => `'${s}'`).join(',')}]` : null;
     const query = `
     INSERT INTO
      pessoas(
@@ -60,16 +56,22 @@ module.exports.insertPerson = async function ({ apelido, nome, nascimento, stack
         stack
      )
     VALUES (
-        '${apelido}',
-        '${nome}',
-        '${nascimento}',
-        ${stackValue}
+        $1,
+        $2,
+        $3,
+        $4::json
     )
+    RETURNING
+        id,
+        apelido,
+        nome,
+        nascimento,
+        stack
     `
-    return pool.query(query);
+    return pool.query(query, [apelido, nome, nascimento, JSON.stringify(stack)]);
 }
 
-module.exports.findById = async function (id) {
+module.exports.findById = async function findById(id) {
     const query = `
     SELECT
         id,
@@ -97,13 +99,19 @@ module.exports.findByTerm = async function findByTerm(term) {
     WHERE
 	    to_tsvector('english', apelido) @@ plainto_tsquery('"${term}":*')
 	    OR to_tsvector('english', nome) @@ plainto_tsquery('"${term}":*')
-	    OR to_tsvector(array_to_string(stack, ' ')) @@ plainto_tsquery('"${term}":*')
+	    OR to_tsvector('english', stack) @@ plainto_tsquery('"${term}":*')
     LIMIT 50;`
     return pool.query(query);
 }
 
-module.exports.count = async function () {
-    return pool.query(`SELECT COUNT(id) FROM pessoas`);
+module.exports.existsByApelido = async function existsByApelido(apelido){
+    const querySet = await pool.query(`SELECT COUNT(1) FROM pessoas WHERE "apelido" = $1`, [apelido])
+    const [ result ] = querySet.rows;
+    return result;
+}
+
+module.exports.count = async function count() {
+    return pool.query(`SELECT COUNT(1) FROM pessoas`);
 }
 
 const batchItems = {};
@@ -137,3 +145,24 @@ process.env.BATCH === 'true' ? (() => {
         module.exports[moduleKey] = promisify(newApi);
     })
 })() : null;
+
+const LOG_TRESHOLD = Number(process.env.LOG_TRESHOLD) || 3000;
+
+process.env.SLOW_QUERY_ALERT === 'true' ? (() => {
+    Object.keys(module.exports).forEach((mK) => {
+        const fn = module.exports[mK];
+
+        async function newApi(){
+            const timestamp = Date.now();
+            const result = await fn(...arguments);
+            const final = Date.now();
+            const delta = final - timestamp;
+            if(delta >= LOG_TRESHOLD){
+                logger.warn(`Query took ${delta}ms for fn ${fn.name}`);
+            }
+            return result;
+        }
+
+        module.exports[mK] = newApi.bind(module.exports);
+    })
+})() : null
