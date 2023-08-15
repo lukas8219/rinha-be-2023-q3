@@ -11,14 +11,14 @@ services:
       deploy:
         resources:
           limits:
-            cpus: '0.50'
+            cpus: '1'
             memory: '0.5GB'
   app1:
       image: lukas8219/rinha-be-2023-q3:latest
       environment:
         DB_URL: "postgres://postgres:12345678@postgres:5432/postgres"
-        BATCH: "true"
-        CLUSTER: "true"
+        BATCH: "false"
+        CLUSTER: "false"
         PINO_LOG_LEVEL: "error"
         REQ_TIMEOUT: "10000"
       ports:
@@ -28,14 +28,14 @@ services:
       deploy:
         resources:
           limits:
-            cpus: '0.45'
-            memory: '0.5GB'
+            cpus: '0.225'
+            memory: '0.2GB'
   app2:
       image: lukas8219/rinha-be-2023-q3:latest
       environment:
         DB_URL: "postgres://postgres:12345678@postgres:5432/postgres"
-        BATCH: "true"
-        CLUSTER: "true"
+        BATCH: "false"
+        CLUSTER: "false"
         REQ_TIMEOUT: "10000"
         PINO_LOG_LEVEL: "error"
       ports:
@@ -45,8 +45,42 @@ services:
       deploy:
         resources:
           limits:
-            cpus: '0.45'
-            memory: '0.5GB'
+            cpus: '0.1'
+            memory: '0.2GB'
+  app3:
+      image: lukas8219/rinha-be-2023-q3:latest
+      environment:
+        DB_URL: "postgres://postgres:12345678@postgres:5432/postgres"
+        BATCH: "false"
+        CLUSTER: "false"
+        REQ_TIMEOUT: "10000"
+        PINO_LOG_LEVEL: "error"
+      ports:
+        - "8080"
+      depends_on:
+        - postgres
+      deploy:
+        resources:
+          limits:
+            cpus: '0.1'
+            memory: '0.2GB'
+  app4:
+      image: lukas8219/rinha-be-2023-q3:latest
+      environment:
+        DB_URL: "postgres://postgres:12345678@postgres:5432/postgres"
+        BATCH: "false"
+        CLUSTER: "false"
+        REQ_TIMEOUT: "10000"
+        PINO_LOG_LEVEL: "error"
+      ports:
+        - "8080"
+      depends_on:
+        - postgres
+      deploy:
+        resources:
+          limits:
+            cpus: '0.1'
+            memory: '0.2GB'
   nginx: # Load Balancer
     image: nginx:latest
     volumes:

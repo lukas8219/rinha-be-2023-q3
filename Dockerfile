@@ -3,6 +3,6 @@ FROM node:18.12.1-alpine
 COPY . .
 RUN npm ci
 
-RUN npm install pm2 -g
+RUN npm install -g forever
 
-CMD ["pm2-runtime", "--instances", "4", "index.js"]
+CMD ["forever", "-f", "index.js"]

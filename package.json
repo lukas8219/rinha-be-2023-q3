@@ -19,6 +19,7 @@
     "pino": "^8.15.0"
   },
   "devDependencies": {
-    "autocannon": "^7.12.0"
+    "autocannon": "^7.12.0",
+    "forever": "^4.0.3"
   }
 }

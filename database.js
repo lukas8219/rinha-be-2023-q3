@@ -30,6 +30,7 @@ pool.once('connect', () => {
 
 async function connect() {
     try {
+        logger.info(`Connecting to db ${URL}`);
         await pool.connect();
     } catch(err){
         setTimeout(() => {
@@ -121,10 +122,8 @@ process.env.BATCH === 'true' ? (() => {
             const realCb = arguments[arguments.length - 1];
             const cb = function () {
                 realCb(...arguments);
-                setImmediate(() => {
-                    (queue || []).forEach((cb) => cb(...arguments))
-                    batchItems[moduleKey].delete(key);
-                });
+                (queue || []).forEach((cb) => cb(...arguments))
+                batchItems[moduleKey].delete(key);
             };
             if (queue) {
                 logger.debug(`${moduleKey} has been queued: for args ${key}`);
