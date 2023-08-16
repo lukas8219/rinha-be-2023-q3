@@ -5,7 +5,7 @@ const res = require('express/lib/response');
 
 const URL = process.env.DB_URL || 'postgres://postgres:12345678@localhost:5432/postgres';
 
-const pool = new pg.Pool({ connectionString: URL, min: 8, max: 8 });
+const pool = new pg.Pool({ connectionString: URL, min: 2, max: 4 });
 
 pool.on('error', connect);
 

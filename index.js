@@ -54,7 +54,7 @@ app.get('/pessoas', async (req, res, next) => {
 
         const t = req.query.t;
 
-        const cached = await store.get(`cache:findByTerm:${t}`);
+        const cached = await store.getEx(`cache:findByTerm:${t}`, 5);
 
         if(cached){
             return res.json(JSON.parse(cached));
