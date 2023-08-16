@@ -2,25 +2,26 @@
 
 ### Tecnologias usadas:
 
-- Node
-- Redis (vou meter ainda)
+- Node + Express
+- Redis
 - Postgres
 
 
-### WIP
-
-Problema -  Banco gargalando - Reaching 100% > CPU usage com 1.0 CPU
-![Alt text](./imgs/08-15-2am.png)
-
-1. Checar se é leitura ou escrita o problema
-2. Adicionar Redis - Redis em batch?
-
-WIP - Aperfeiçoar logica de batching ??
+### WIP - Almost Done
+100% success:
+- TBD adicionar screenshot
 
 
-### Cache
+### Tática
+- Confiar no eventloop 🙏🏻
+- Cache no Get by Id e pós POST
+- SET para apelidos usados
+- Cache na validaçao do POST. Caso exista
+- Cache 5 segundos na busca por termo
 
-Cache a nível de UNIQUE e de GET
+Tabela
+Id, apelido, nome, stack(Como JSON)
 
-### Tática:
-Apenas fazer batch no client e rezar pro eventloop não morrer
+- Cliente se responsabiliza pela consistencia do array na stack
+
+Index de FTS, individual em cada campo.
