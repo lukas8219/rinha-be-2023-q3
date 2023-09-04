@@ -3,11 +3,12 @@ const { logger } = require('./logger');
 const { insertPerson, count, findById, findByTerm } = require('./database');
 const { validateBody, errorHandler } = require('./middleware');
 const bodyParser = require('body-parser');
+const cluster = require('cluster');
 const process = require('process');
 const { v4: uuidv4 } = require('uuid');
 
 const TIMEOUT = Number(process.env.REQ_TIMEOUT) || 5000;
-process.env.UV_THREADPOOL_SIZE = 5; // os.cpus().length
+// process.env.UV_THREADPOOL_SIZE = 10; // os.cpus().length
 
 const app = express();
 
@@ -58,16 +59,30 @@ app.get('/contagem-pessoas', async (_, res) => {
 
 app.use(errorHandler);
 
-const serverApp = app.listen(8080, () => {
-    logger.info(`index.js:${process.pid}:Listening on 8080`);
-});
+const numForks = Number(process.env.CLUSTER_WORKERS) || 1;
 
-if (process.env.USE_TIMEOUT === 'true') {
-    serverApp.setTimeout(TIMEOUT)
-    logger.info(`Starting with timeout as ${TIMEOUT}ms`)
+if(cluster.isPrimary && process.env.CLUSTER === 'true'){
+    logger.info(`index.js: Primary ${process.pid} is running`);
 
-    serverApp.on('timeout', (socket) => {
-        logger.warn(`Timing out connection`);
-        socket.end();
-    })
+    for (let i = 0; i < numForks; i++) {
+      cluster.fork();
+    }
+
+    cluster.on('exit', (worker, code, signal) => {
+        logger.info(`index.js: worker ${worker.process.pid} died: code ${code} signal ${signal}`);
+    });
+} else {
+    const serverApp = app.listen(8080, () => {
+        logger.info(`index.js:${process.pid}:Listening on 8080`);
+    });
+
+    if (process.env.USE_TIMEOUT === 'true') {
+        serverApp.setTimeout(TIMEOUT)
+        logger.info(`Starting with timeout as ${TIMEOUT}ms`)
+
+        serverApp.on('timeout', (socket) => {
+            logger.warn(`Timing out connection`);
+            socket.end();
+        })
+    }
 }

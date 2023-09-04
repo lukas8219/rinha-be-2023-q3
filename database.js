@@ -3,7 +3,7 @@ const { logger } = require('./logger');
 
 const URL = process.env.DB_URL || 'postgres://postgres:12345678@localhost:5432/postgres';
 
-const pool = new pg.Pool({ connectionString: URL, min: 10, max: process.env.DB_POOL || 200 });
+const pool = new pg.Pool({ connectionString: URL, min: 10, max: (Number(process.env.DB_POOL) || 200) });
 
 pool.on('error', connect);
 

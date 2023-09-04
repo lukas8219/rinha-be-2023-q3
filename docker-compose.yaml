@@ -9,6 +9,9 @@ services:
       DB_POOL: 100
       PINO_LOG_LEVEL: "fatal"
       REQ_TIMEOUT: "2000"
+      NODE_ENV: production
+      CLUSTER: true
+      CLUSTER_WORKERS: 2
     expose:
       - "8080"
     depends_on:
@@ -46,7 +49,7 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: '1.75GB'
+          memory: '1.7GB'
 
   nginx: # Load Balancer
     image: nginx:latest
