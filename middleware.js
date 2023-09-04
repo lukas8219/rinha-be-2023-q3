@@ -1,97 +1,46 @@
 const _ = require('lodash');
-const { logger } = require('./logger');
 const moment = require('moment');
-const { store } = require('./cache');
-const { existsByApelido } = require('./database');
 
 module.exports.validateBody = async function validate(req, res, next){
     const { apelido, nome, nascimento, stack } = req.body;
     if(!apelido || typeof apelido !== 'string'){
-        res.status(422);
-        return res.json({
-            error: 'apelido invalido'
-        })
+        return res.status(422);
     };
 
     if(apelido.length > 32) {
-        res.status(422);
-        return res.json({
-            error: 'apelido invalido'
-        })
+        return res.status(422);
     }
 
     if(!nome || typeof nome !== 'string') {
-        res.status(422);
-        return res.json({
-            error: 'nome invalido'
-        })
+        return res.status(422);
     }
 
     if(nome.length > 100) {
-        res.status(422);
-        return res.json({
-            error: 'nome invalido'
-        })
+        return res.status(422);
     }
 
     if(!nascimento || typeof nascimento !== 'string'){
-        res.status(422);
-        return res.json({
-            error: 'nascimento invalido'
-        })
+        return res.status(422);
     }
 
     if(nascimento.length !== "AAAA-MM-DD".length) {
-        res.status(422);
-        return res.json({
-            error: 'nascimento invalido'
-        })
+        return res.status(422);
     }
 
     if(nascimento.length && !moment(nascimento, 'YYYY-MM-DD').isValid()){
-        res.status(422);
-        return res.json({
-            error: 'nascimento invalido'
-        })
+        return res.status(422);
     }
 
     if(!_.isUndefined(stack) && !Array.isArray(stack)){
-        res.status(422);
-        return res.json({
-            error: 'stack precisa ser uma array'
-        })
+        return res.status(422);
     }
 
     if(stack&& stack.length && stack.some((s) => s === undefined || s === null || s === "" || !_.isString(s))){
-        res.status(422);
-        return res.json({
-            error: 'stack com item invalido'
-        })
+        return res.status(422);
     }
 
     if(stack && stack.length && stack.some((s) => s.length > 32)){
-        res.status(422);
-        return res.json({
-            error: 'stack com item maior que 32 caracteres'
-        })
-    }
-
-    const isUsed = await store.sIsMember('pessoas:used-nicknames', apelido);
-
-    if(isUsed){
-        res.status(422);
-        return res.json({
-            error: 'nome ou apelido em uso',
-        })
-    }
-
-    const { count } = await existsByApelido(apelido);
-
-    if(Number(count)){
-        await store.sAdd('pessoas:used-nicknames', apelido);
-        return res.status(422).json({
-            error: 'apelido em uso'
-        })
+        return res.status(422);
     }
 
     return await next();
