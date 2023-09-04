@@ -2,7 +2,7 @@ const express = require('express');
 const { Router } = require('express');
 const { logger } = require('./logger');
 const { insertPerson, count, findById, findByTerm } = require('./database');
-const { validateBody, errorHandler } = require('./middleware');
+const { validationFilter, errorHandler } = require('./middleware');
 const bodyParser = require('body-parser');
 const cluster = require('cluster');
 const process = require('process');
@@ -17,12 +17,12 @@ const apiRouter = Router();
 app.use(bodyParser.json())
 app.use('/pessoas', apiRouter)
 
-apiRouter.post('/', validateBody, (req, res, _) => {
+apiRouter.post('/', validationFilter, (req, res, _) => {
     const id = uuidv4();
     insertPerson(id, req.body).then(() => {
         res.status(201).location(`/pessoas/${id}`).end();
     }).catch(() => {
-        res.status(422).end();
+        res.status(422).end()
     })
 });
 

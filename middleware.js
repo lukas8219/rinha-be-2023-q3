@@ -1,30 +1,37 @@
 const _ = require('lodash');
 const { parse, isDate } = require('date-fns');
 
-module.exports.validateBody = (req, res, next) => {
-    const { apelido, nome, nascimento, stack } = req.body;
+module.exports.validateDate = (dateString) => {
+    // isDate returns true regardless if the date is actually valid or not
+    return !isNaN(parse(dateString, 'yyyy-MM-dd', new Date()))
+}
 
-    if(typeof apelido !== 'string' || apelido.length > 32) {
-        return res.status(422).end();
-    }
+module.exports.validateBody = (req) => {
+    const { apelido, nome, nascimento, stack } = req.body
 
-    if(typeof nome !== 'string' || nome.length > 100) {
-        return res.status(422).end();
-    }
+    if(typeof apelido !== 'string' || apelido.length > 32)
+        return false
 
-    if(typeof nascimento !== 'string' || !isDate(parse(nascimento, 'yyyy-MM-dd', new Date()))) {
-        return res.status(422).end();
-    }
+    if(typeof nome !== 'string' || nome.length > 100)
+        return false
 
-    if(!_.isUndefined(stack) && !Array.isArray(stack)) {
-        req.body.stack = [];
-    }
+    if(typeof nascimento !== 'string' || !this.validateDate(nascimento))
+        return false
 
-    if(stack && stack.length) {
+    if(!_.isUndefined(stack) && !Array.isArray(stack))
+        req.body.stack = []
+
+    if(stack && stack.length)
         req.body.stack = stack.filter((s) => !_.isString(s) || s === "" || s.length > 32)
-    }
 
-    next();
+    return true
+}
+
+module.exports.validationFilter = (req, res, next) => {
+    if (!this.validateBody(req))
+        return res.status(422).end()
+
+    next()
 }
 
 module.exports.errorHandler = (err, req, res, _) => {
