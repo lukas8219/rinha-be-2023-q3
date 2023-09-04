@@ -26,8 +26,8 @@ pool.once('connect', () => {
 
         CREATE TABLE IF NOT EXISTS pessoas (
             id uuid DEFAULT gen_random_uuid() UNIQUE NOT NULL,
-            apelido VARCHAR(32) UNIQUE NOT NULL,
-            nome VARCHAR(100) NOT NULL,
+            apelido TEXT UNIQUE NOT NULL,
+            nome TEXT NOT NULL,
             nascimento DATE NOT NULL,
             stack JSON,
             searchable text GENERATED ALWAYS AS (generate_searchable(nome, apelido, stack)) STORED

@@ -1,49 +1,40 @@
 const _ = require('lodash');
-const moment = require('moment');
+const { parse, isDate } = require('date-fns');
 
-module.exports.validateBody = async function validate(req, res, next){
+module.exports.validateDate = (dateString) => {
+    const parsedDate = parse(dateString, 'yyyy-MM-dd', new Date());
+
+    if (isDate(parsedDate)) {
+        return parsedDate;
+    } else {
+        return null;
+    }
+}
+
+module.exports.validateBody = (req, res, next) => {
     const { apelido, nome, nascimento, stack } = req.body;
-    if(!apelido || typeof apelido !== 'string'){
-        return res.status(422);
-    };
 
-    if(apelido.length > 32) {
-        return res.status(422);
+    if(typeof apelido !== 'string' || apelido.length > 32) {
+        return res.status(422).end();
     }
 
-    if(!nome || typeof nome !== 'string') {
-        return res.status(422);
+    if(typeof nome !== 'string' || nome.length > 100) {
+        return res.status(422).end();
     }
 
-    if(nome.length > 100) {
-        return res.status(422);
+    if(typeof nascimento !== 'string' || !validateDate(nascimento)) {
+        return res.status(422).end();
     }
 
-    if(!nascimento || typeof nascimento !== 'string'){
-        return res.status(422);
+    if(!_.isUndefined(stack) && !Array.isArray(stack)) {
+        req.body.stack = [];
     }
 
-    if(nascimento.length !== "AAAA-MM-DD".length) {
-        return res.status(422);
+    if(stack && stack.length) {
+        req.body.stack = stack.filter((s) => !_.isString(s) || s === "" || s.length > 32)
     }
 
-    if(nascimento.length && !moment(nascimento, 'YYYY-MM-DD').isValid()){
-        return res.status(422);
-    }
-
-    if(!_.isUndefined(stack) && !Array.isArray(stack)){
-        return res.status(422);
-    }
-
-    if(stack&& stack.length && stack.some((s) => s === undefined || s === null || s === "" || !_.isString(s))){
-        return res.status(422);
-    }
-
-    if(stack && stack.length && stack.some((s) => s.length > 32)){
-        return res.status(422);
-    }
-
-    return await next();
+    return next();
 }
 
 module.exports.errorHandler = function clientErrorHandler (err, req, res, next) {
