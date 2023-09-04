@@ -1,4 +1,5 @@
 const express = require('express');
+const { Router } = require('express');
 const { logger } = require('./logger');
 const { insertPerson, count, findById, findByTerm } = require('./database');
 const { validateBody, errorHandler } = require('./middleware');
@@ -8,53 +9,54 @@ const process = require('process');
 const { v4: uuidv4 } = require('uuid');
 
 const TIMEOUT = Number(process.env.REQ_TIMEOUT) || 5000;
-// process.env.UV_THREADPOOL_SIZE = 10; // os.cpus().length
+process.env.UV_THREADPOOL_SIZE = 1; // os.cpus().length
 
 const app = express();
+const apiRouter = Router();
 
 app.use(bodyParser.json())
+app.use('/pessoas', apiRouter)
 
-app.post('/pessoas', validateBody, async (req, res, _) => {
-    try {
-        const id = uuidv4();
-        await insertPerson(id, req.body);
-        return res.status(201).location(`/pessoas/${id}`).end();
-    } catch (err) {
-        return res.status(422).end();
-    }
+apiRouter.post('/', validateBody, (req, res, _) => {
+    const id = uuidv4();
+    insertPerson(id, req.body).then(() => {
+        res.status(201).location(`/pessoas/${id}`).end();
+    }).catch(() => {
+        res.status(422).end();
+    })
 });
 
-app.get('/pessoas/:id', async (req, res, _) => {
-    try {
-        const queryResult = await findById(req.params.id);
+apiRouter.get('/:id', (req, res, _) => {
+    findById(req.params.id).then((queryResult) => {
         const [result] = queryResult.rows;
         if (!result) {
             return res.status(404).end();
         }
-        return res.json(result).end();
-    } catch (err) {
-        return res.status(404).end();
-    }
+        res.json(result).end();
+    }).catch(() => {
+        res.status(404).end();
+    })
 });
 
-app.get('/pessoas', async (req, res, _) => {
-    try {
-        if (!req.query['t']) {
-            return res.status(400).end();
-        };
+apiRouter.get('/', (req, res, _) => {
+    if (!req.query['t']) {
+        return res.status(400).end();
+    };
 
-        const queryResults = await findByTerm(req.query.t)
-
-        return res.json(queryResults.rows).end();
-    } catch (err) {
-        return res.status(404).end();
-    }
+    findByTerm(req.query.t).then((queryResults) => {
+        res.json(queryResults.rows).end()
+    }).catch(() => {
+        res.status(404).end();
+    })
 });
 
-app.get('/contagem-pessoas', async (_, res) => {
-    const queryResult = await count();
-    const [countResult] = queryResult.rows;
-    return res.json(countResult).end();
+app.get('/contagem-pessoas', (_, res) => {
+    count().then((queryResult) => {
+        const [countResult] = queryResult.rows;
+        res.json(countResult).end();
+    }).catch(() => {
+        res.status(422).end();
+    })
 });
 
 app.use(errorHandler);

@@ -6,12 +6,12 @@ services:
     hostname: app1
     environment:
       DB_URL: "postgres://postgres:12345678@postgres:5432/postgres"
-      DB_POOL: 50
+      DB_POOL: 10
       PINO_LOG_LEVEL: "debug"
       REQ_TIMEOUT: "2000"
       NODE_ENV: production
       CLUSTER: true
-      CLUSTER_WORKERS: 4
+      CLUSTER_WORKERS: 5
     expose:
       - "8080"
     depends_on:
