@@ -1,7 +1,7 @@
 const _ = require('lodash');
 const { parse, isDate } = require('date-fns');
 
-module.exports.validateDate = (dateString) => {
+const validateDate = (dateString) => {
     const parsedDate = parse(dateString, 'yyyy-MM-dd', new Date());
 
     if (isDate(parsedDate)) {
@@ -15,15 +15,15 @@ module.exports.validateBody = (req, res, next) => {
     const { apelido, nome, nascimento, stack } = req.body;
 
     if(typeof apelido !== 'string' || apelido.length > 32) {
-        return res.status(422).end();
+        return res.status(422);
     }
 
     if(typeof nome !== 'string' || nome.length > 100) {
-        return res.status(422).end();
+        return res.status(422);
     }
 
     if(typeof nascimento !== 'string' || !validateDate(nascimento)) {
-        return res.status(422).end();
+        return res.status(422);
     }
 
     if(!_.isUndefined(stack) && !Array.isArray(stack)) {

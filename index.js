@@ -9,7 +9,7 @@ const process = require('process');
 const { v4: uuidv4 } = require('uuid');
 
 const TIMEOUT = Number(process.env.REQ_TIMEOUT) || 5000;
-process.env.UV_THREADPOOL_SIZE = 1; // os.cpus().length
+// process.env.UV_THREADPOOL_SIZE = 1; // os.cpus().length
 
 const app = express();
 const apiRouter = Router();
