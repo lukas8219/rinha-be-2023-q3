@@ -1,11 +1,13 @@
 const pg = require('pg');
 const { logger } = require('./logger');
-const { callbackify, promisify } = require('util');
-const res = require('express/lib/response');
 
 const URL = process.env.DB_URL || 'postgres://postgres:12345678@localhost:5432/postgres';
 
-const pool = new pg.Pool({ connectionString: URL, min: 2, max: 4 });
+const pool = new pg.Pool({ connectionString: URL,
+    max: (Number(process.env.DB_POOL) || 200),
+    idleTimeoutMillis: 0,
+    connectionTimeoutMillis: 10000
+    });
 
 pool.on('error', connect);
 
@@ -13,22 +15,27 @@ pool.once('connect', () => {
     logger.info(`database.js: Connected  to db ${URL}`)
     logger.info(`Creating table "pessoas" if not exists`);
     return pool.query(`
-        CREATE TABLE IF NOT EXISTS pessoas (
-            id SERIAL PRIMARY KEY,
-            apelido VARCHAR(32) UNIQUE NOT NULL,
-            nome VARCHAR(100) NOT NULL,
-            nascimento DATE NOT NULL,
-            stack JSON
-        );
-    
-        CREATE INDEX IF NOT EXISTS term_search_index_apelido ON pessoas
-            USING gin(to_tsvector('english', apelido));
-          
-        CREATE INDEX IF NOT EXISTS term_search_index_nome ON pessoas
-            USING gin(to_tsvector('english', nome));
+        CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-        CREATE INDEX IF NOT EXISTS term_search_index_stack ON pessoas
-            USING gin(to_tsvector('english', stack));
+        CREATE OR REPLACE FUNCTION generate_searchable(_nome VARCHAR, _apelido VARCHAR, _stack JSON)
+            RETURNS TEXT AS $$
+            BEGIN
+            RETURN _nome || _apelido || _stack;
+            END;
+        $$ LANGUAGE plpgsql IMMUTABLE;
+
+        CREATE TABLE IF NOT EXISTS pessoas (
+            id uuid DEFAULT gen_random_uuid() UNIQUE NOT NULL,
+            apelido TEXT UNIQUE NOT NULL,
+            nome TEXT NOT NULL,
+            nascimento DATE NOT NULL,
+            stack JSON,
+            searchable text GENERATED ALWAYS AS (generate_searchable(nome, apelido, stack)) STORED
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_pessoas_searchable ON public.pessoas USING gist (searchable public.gist_trgm_ops (siglen='64'));
+
+        CREATE UNIQUE INDEX IF NOT EXISTS pessoas_apelido_index ON public.pessoas USING btree (apelido);
         `)
 });
 
@@ -46,10 +53,11 @@ async function connect() {
 
 connect();
 
-module.exports.insertPerson = async function ({ apelido, nome, nascimento, stack }) {
+module.exports.insertPerson = async function (id, { apelido, nome, nascimento, stack }) {
     const query = `
     INSERT INTO
      pessoas(
+        id,
         apelido,
         nome,
         nascimento,
@@ -59,16 +67,11 @@ module.exports.insertPerson = async function ({ apelido, nome, nascimento, stack
         $1,
         $2,
         $3,
-        $4::json
+        $4,
+        $5::json
     )
-    RETURNING
-        id,
-        apelido,
-        nome,
-        nascimento,
-        stack
     `
-    return pool.query(query, [apelido, nome, nascimento, JSON.stringify(stack)]);
+    return pool.query(query, [id, apelido, nome, nascimento, JSON.stringify(stack)]);
 }
 
 module.exports.findById = async function findById(id) {
@@ -81,9 +84,9 @@ module.exports.findById = async function findById(id) {
         stack
     FROM
         pessoas
-    WHERE "id" = ${id}
+    WHERE "id" = $1;
     `
-    return pool.query(query);
+    return pool.query(query, [id]);
 }
 
 module.exports.findByTerm = async function findByTerm(term) {
@@ -97,11 +100,9 @@ module.exports.findByTerm = async function findByTerm(term) {
     FROM
         pessoas
     WHERE
-	    to_tsvector('english', apelido) @@ plainto_tsquery('"${term}":*')
-	    OR to_tsvector('english', nome) @@ plainto_tsquery('"${term}":*')
-	    OR to_tsvector('english', stack) @@ plainto_tsquery('"${term}":*')
+        searchable ILIKE $1
     LIMIT 50;`
-    return pool.query(query);
+    return pool.query(query, [`%${term}%`]);
 }
 
 module.exports.existsByApelido = async function existsByApelido(apelido){
@@ -113,38 +114,6 @@ module.exports.existsByApelido = async function existsByApelido(apelido){
 module.exports.count = async function count() {
     return pool.query(`SELECT COUNT(1) FROM pessoas`);
 }
-
-const batchItems = {};
-
-const toBeBatched = ['findById', 'findByTerm'];
-
-process.env.BATCH === 'true' ? (() => {
-    toBeBatched.forEach((moduleKey) => {
-        batchItems[moduleKey] = new Map();
-        const fn = module.exports[moduleKey];
-
-        function newApi() {
-            const args = new Array(...arguments).slice(0, arguments.length - 1);
-            const key = JSON.stringify(args);
-            const queue = batchItems[moduleKey].get(key);
-            const realCb = arguments[arguments.length - 1];
-            const cb = function () {
-                realCb(...arguments);
-                (queue || []).forEach((cb) => cb(...arguments))
-                batchItems[moduleKey].delete(key);
-            };
-            if (queue) {
-                logger.debug(`${moduleKey} has been queued: for args ${key}`);
-                return queue.push(cb);
-            }
-            batchItems[moduleKey].set(key, new Array([cb]));
-            arguments[arguments.length - 1] = cb;
-            callbackify(fn).call(this, ...arguments);
-        }
-
-        module.exports[moduleKey] = promisify(newApi);
-    })
-})() : null;
 
 const LOG_TRESHOLD = Number(process.env.LOG_TRESHOLD) || 3000;
 
