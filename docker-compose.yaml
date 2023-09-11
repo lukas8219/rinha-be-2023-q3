@@ -3,17 +3,16 @@ services:
   app1: &app
     # image: lukas8219/rinha-be-2023-q3:latest
     build: .
-    hostname: app1
     environment:
-      DB_URL: "postgres://postgres:12345678@postgres:5432/postgres"
-      DB_POOL: 35
+      DB_URL: "postgres://postgres:12345678@localhost:5432/postgres"
+      DB_POOL: 45
       PINO_LOG_LEVEL: "debug"
       REQ_TIMEOUT: "2000"
       NODE_ENV: production
       CLUSTER: true
-      CLUSTER_WORKERS: 5
-    expose:
-      - "8080"
+      CLUSTER_WORKERS: 4
+      HTTP_PORT: 8080
+    network_mode: host
     depends_on:
       - postgres
     ulimits:
@@ -24,21 +23,28 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          cpus: '0.4'
           memory: '0.6GB'
   app2:
     <<: *app
-    hostname: app2
+    environment:
+      DB_URL: "postgres://postgres:12345678@localhost:5432/postgres"
+      DB_POOL: 45
+      PINO_LOG_LEVEL: "debug"
+      REQ_TIMEOUT: "2000"
+      NODE_ENV: production
+      CLUSTER: true
+      CLUSTER_WORKERS: 4
+      HTTP_PORT: 8081
 
   postgres:
     image: postgres
-    command: postgres -c 'max_connections=450' -c 'log_error_verbosity=terse'
+    command: postgres -c 'max_connections=450' -c 'log_error_verbosity=terse' -c 'client_min_messages=error'
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 12345678
-    ports:
-      - 5432:5432
+    network_mode: host
     healthcheck:
       test: ["CMD-SHELL", "pg_isready"]
       interval: 5s
@@ -48,7 +54,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.4'
+          cpus: '0.55'
           memory: '1.5GB'
 
   nginx: # Load Balancer
@@ -58,8 +64,7 @@ services:
     depends_on:
       - app1
       - app2
-    ports:
-      - "9999:9999"
+    network_mode: host
     ulimits:
       nproc: 1000000
       nofile:
@@ -68,5 +73,5 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.1'
+          cpus: '0.15'
           memory: '0.3GB'

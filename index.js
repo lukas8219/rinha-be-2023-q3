@@ -9,6 +9,7 @@ const process = require('process');
 const { v4: uuidv4 } = require('uuid');
 
 const TIMEOUT = Number(process.env.REQ_TIMEOUT) || 5000;
+const PORT = Number(process.env.HTTP_PORT) || 8080;
 // process.env.UV_THREADPOOL_SIZE = 1; // os.cpus().length
 
 const app = express();
@@ -74,7 +75,7 @@ if(cluster.isPrimary && process.env.CLUSTER === 'true'){
         logger.info(`index.js: worker ${worker.process.pid} died: code ${code} signal ${signal}`);
     });
 } else {
-    const serverApp = app.listen(8080, () => {
+    const serverApp = app.listen(PORT, () => {
         logger.info(`index.js:${process.pid}:Listening on 8080`);
     });
 
